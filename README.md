@@ -1,2 +1,2 @@
 # payx
-A payment and loan management site banking dashboard
+Payments and loan management site with banking dashboard

@@ -9,8 +9,8 @@ router.post('/', (req, res) => {
     res.send('pay post')
 })
 
-router.get('/transactions', (req, res) => {
-    res.send("all trasnactins of that user")
+router.get('/transactions/:accountNumber', (req, res) => {
+    res.send("all transactions of the account")
 })
 
 export default router

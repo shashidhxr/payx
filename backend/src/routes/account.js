@@ -6,6 +6,16 @@ const generateAccountNumber = () => {
     return Math.floor(10000000 + Math.random() * 90000000).toString();
 };
 
+router.get('/', (req, res) => {
+    const q = 'SELECT * from accounts';
+    db.query(q, (err, data) => {
+        if (err) {
+            return res.status(500).json({ error: err.message });
+        }
+        return res.status(200).json(data);
+    });
+});
+
 router.post('/create', (req, res) => {
     const accountNumber = generateAccountNumber();
     const q = 'INSERT INTO accounts (account_number, user_id, branch_id, account_type, balance) VALUES (?, ?, ?, ?, ?)';
@@ -16,7 +26,7 @@ router.post('/create', (req, res) => {
         req.body.account_type,
         req.body.balance,
     ];
-
+    
     db.query(q, values, (err, data) => {
         if (err) {
             return res.status(500).json({ error: err.message });

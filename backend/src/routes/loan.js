@@ -3,6 +3,16 @@ import db from '../lib/db.js';
 
 const router = express.Router()
 
+router.get('/', (req, res) => {
+    const q = 'SELECT * from loans';
+    db.query(q, (err, data) => {
+        if (err) {
+            return res.status(500).json({ error: err.message });
+        }
+        return res.status(200).json(data);
+    });
+});
+
 router.get('/:loanId', (req, res) => {
     const loanId = req.params.loanId;
     
@@ -43,7 +53,7 @@ router.get('/user/:userId', (req, res) => {
     });
 });
 
-router.post('/', (req, res) => {
+router.post('/apply', (req, res) => {
     const { user_id, branch_id, amount, loan_type, interest_rate, term_months } = req.body;
     const q = 'INSERT INTO loans (user_id, branch_id, amount, loan_type, interest_rate, term_months, status) VALUES (?, ?, ?, ?, ?, ?, "pending")';
     const values = [user_id, branch_id, amount, loan_type, interest_rate, term_months];

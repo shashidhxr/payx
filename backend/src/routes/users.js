@@ -3,6 +3,18 @@ import db from '../lib/db.js'
 
 const   router = express.Router()
 
+router.get('/', (req, res) => {
+    const userId = req.params.userId
+    const q = 'select * from users'
+    db.query(q, [userId], (err, data) => {
+        if(err){
+            return res.status(500).send(err)
+        }
+        return res.status(200).json({
+            user: data
+        })
+    })
+})
 router.get('/:userId', (req, res) => {
     const userId = req.params.userId
     const q = 'select * from users where user_id = ?'
@@ -15,6 +27,20 @@ router.get('/:userId', (req, res) => {
         })
     })
 })
+
+router.get('/:userId/accounts', (req, res) => {
+    const userId = req.params.userId;
+    const q = 'SELECT * FROM accounts WHERE user_id = ?';
+    db.query(q, [userId], (err, data) => {
+        if (err) {
+            return res.status(500).send(err);
+        }
+        return res.status(200).json({
+            accounts: data
+        });
+    });
+});
+
 
 router.post('/create', (req, res) => {
     const { first_name, last_name, email, phone, address, cibil_score } = req.body;

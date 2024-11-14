@@ -1,7 +1,7 @@
 import express from 'express'
 import db from '../lib/db.js'
 
-const   router = express.Router()
+const router = express.Router()
 
 router.get('/', (req, res) => {
     const userId = req.params.userId
@@ -72,6 +72,29 @@ router.get('/:userId/details', (req, res) => {
         return res.status(200).json(data[0]);
     });
 });
+
+router.get('/totalBalance/:userId', (req, res) => {
+    const userId = req.params.userId;
+    console.log("User ID:", userId); // Log the userId to check if it's correct
+
+    const q = `
+        SELECT SUM(CAST(balance AS DECIMAL(15, 2))) AS total_balance 
+        FROM accounts 
+        WHERE user_id = ?
+    `;
+    
+    db.query(q, [userId], (err, data) => {
+        if (err) {
+            console.error("Database Error:", err); // Log any database error
+            return res.status(500).send(err);
+        }
+        if (data[0].total_balance === null) {
+            return res.status(404).json({ message: "User not found or no accounts found" });
+        }
+        return res.status(200).json({ total_balance: data[0].total_balance });
+    });
+});
+
 
 router.delete('/:userId', (req, res) => {
     const userId = req.params.userId;

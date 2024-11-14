@@ -43,13 +43,13 @@ export interface User {
   }
   
   export interface Loan {
-    loan_id: number;
+    loan_id?: number;
     user_id: number;
     branch_id: number;
     loan_type: 'personal' | 'home' | 'business' | 'education';
-    amount: number;
-    interest_rate: number;
-    term_months: number;
+    amount: string;
+    interest_rate: string;
+    term_months: string;
     status: 'pending' | 'approved' | 'rejected' | 'active' | 'closed' | 'cancelled';
     balance: number;
     applied_date: string;

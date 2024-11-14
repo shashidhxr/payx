@@ -1,7 +1,11 @@
+
+
+////////////////////////////
+
+
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from './AuthContext';
-// import { User } from '../types';
 
 interface CreateAccount {
   user_id: number;
@@ -23,10 +27,10 @@ const CreateAccountPage = () => {
 
     const formData = new FormData(e.currentTarget);
     const accountData: CreateAccount = {
-      user_id: user?.id || 0,
-      branch_id: parseInt(formData.get('branch_id') as string),
-      account_type: formData.get('account_type') as 'savings' | 'checking' | 'fixed_deposit',
-      balance: parseFloat(formData.get('balance') as string),
+      user_id: user?.id || 1,
+      branch_id: parseInt(formData.get('branch_id') as string) || 1,
+      account_type: formData.get('account_type') as 'savings' | 'checking' | 'fixed_deposit' || 'savings',
+      balance: parseFloat(formData.get('balance') as string) || 5000,
     };
 
     try {
@@ -70,6 +74,8 @@ const CreateAccountPage = () => {
           )}
 
           <form className="space-y-6" onSubmit={handleSubmit}>
+            {/* Form fields */}
+            <form className="space-y-6" onSubmit={handleSubmit}>
             <div>
               <label htmlFor="branch_id" className="block text-sm font-medium text-gray-700">
                 Branch ID
@@ -111,8 +117,8 @@ const CreateAccountPage = () => {
                 required
                 className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
               />
-            </div>
-
+            </div>  
+          </form>
             <button
               type="submit"
               disabled={loading}

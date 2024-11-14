@@ -4,9 +4,9 @@ const router = express.Router();
 
 // Endpoint to transfer money between accounts
 router.post('/transfer', async (req, res) => {
-    const { sender, recipient, amount } = req.query;
-    if (!sender || !recipient || !amount) {
-        return res.status(400).send("Missing sender, recipient, or amount");
+    const { senderId, recipientId, amount } = req.query;
+    if (!senderId || !recipientId || !amount || isNaN(amount)) {
+        return res.status(400).send("Missing or invalid senderId, recipientId, or amount");
     }
 
     try {
@@ -14,18 +14,19 @@ router.post('/transfer', async (req, res) => {
         await db.query('START TRANSACTION');
 
         // Deduct amount from sender's account
-        const [senderAccount] = await db.query('SELECT balance FROM accounts WHERE account_number = ?', [sender]);
-        if (!senderAccount || senderAccount.balance < amount) {
+        const [senderAccount] = await db.query('SELECT balance FROM accounts WHERE account_number = ?', [String(senderId)]);
+        if (!senderAccount || senderAccount.balance < parseFloat(amount)) {
             throw new Error('Insufficient funds or account not found');
         }
 
-        await db.query('UPDATE accounts SET balance = balance - ? WHERE account_number = ?', [amount, sender]);
+        await db.query('UPDATE accounts SET balance = balance - ? WHERE account_number = ?', [parseFloat(amount), String(senderId)]);
 
         // Add amount to recipient's account
-        await db.query('UPDATE accounts SET balance = balance + ? WHERE account_number = ?', [amount, recipient]);
+        await db.query('UPDATE accounts SET balance = balance + ? WHERE account_number = ?', [parseFloat(amount), String(recipientId)]);
 
         // Log transaction
-        await db.query('INSERT INTO transactions (account_id, transaction_type, amount, description) VALUES (?, "transfer", ?, "Fund transfer")', [sender, amount]);
+        await db.query('INSERT INTO transactions (account_id, user_id, transaction_type, amount, description) VALUES (?, ?, "transfer", ?, "Fund transfer")', 
+            [senderAccount.account_id, senderAccount.user_id, parseFloat(amount)]);
 
         // Commit transaction
         await db.query('COMMIT');
@@ -36,76 +37,128 @@ router.post('/transfer', async (req, res) => {
     }
 });
 
+// Endpoint to fetch all transactions for a specific user
 router.get('/:userId', async (req, res) => {
     const { userId } = req.params;
 
-    try {
-        // Fetch all transactions for accounts belonging to a specific user
-        const result = await db.execute(
-            `SELECT t.transaction_id, t.amount, t.transaction_type, t.description, t.transaction_date, 
-                    a.account_number, u.first_name AS senderName, u.last_name AS recipientName
-             FROM transactions t
-             JOIN accounts a ON t.account_id = a.account_id
-             JOIN users u ON a.user_id = u.user_id
-             WHERE u.user_id = ?`,
-            [userId]
-        );
+    if (!userId || isNaN(userId)) {
+        return res.status(400).json({ message: "Invalid userId" });
+    }
 
-        // Log the result to check the format of the returned value
-        console.log(result);  // Log the full result to inspect
+    // Use the callback version of db.execute
+    db.execute(`
+        SELECT t.transaction_id, t.amount, t.transaction_type, t.description, t.transaction_date, 
+               a.account_number, u.first_name AS senderName, u.last_name AS recipientName
+        FROM transactions t
+        JOIN accounts a ON t.account_id = a.account_id
+        JOIN users u ON a.user_id = u.user_id
+        WHERE u.user_id = ?`, 
+        [parseInt(userId)],
+        (err, transactions) => {
+            if (err) {
+                console.error("Error fetching transactions:", err);
+                return res.status(500).json({ message: 'Failed to retrieve transactions' });
+            }
 
-        // Check if result[0] is the array of transactions
-        const transactions = result[0] || []; // Adjust this line based on actual structure
+            if (transactions.length === 0) {
+                return res.status(404).json({ message: 'No transactions found for this user.' });
+            }
 
-        // Check if transactions are found
-        if (transactions.length === 0) {
-            return res.status(404).json({ message: 'No transactions found for this user.' });
+            res.json(transactions);
+        }
+    );
+});
+
+
+// Deposit endpoint
+router.post('/deposit', (req, res) => {
+    const { accountNumber, amount, userId } = req.body;
+    if (!accountNumber || !amount || !userId) {
+        return res.status(400).send("Missing or invalid account number, amount, or user ID");
+    }
+
+    // Retrieve the account information
+    db.query('SELECT account_id, balance FROM accounts WHERE account_number = ? AND user_id = ?', [accountNumber, userId], (err, results) => {
+        if (err) {
+            console.error("Database error:", err);
+            return res.status(500).send('Internal server error');
         }
 
-        // Send transactions as JSON response
-        res.json(transactions);
-    } catch (error) {
-        console.error("Error fetching transactions:", error); // Log error for debugging
-        res.status(500).json({ message: 'Failed to retrieve transactions' });
-    }
+        const account = results[0];
+        if (!account) {
+            return res.status(404).send("Account not found");
+        }
+
+        // Perform the deposit by updating the balance
+        const newBalance = account.balance + parseFloat(amount);
+        db.query('UPDATE accounts SET balance = ? WHERE account_id = ?', [newBalance, account.account_id], (err) => {
+            if (err) {
+                console.error("Update error:", err);
+                return res.status(500).send('Deposit failed');
+            }
+
+            // Insert a transaction record
+            db.query('INSERT INTO transactions (user_id, account_id, transaction_type, amount, description) VALUES (?, ?, "deposit", ?, "Account deposit")', 
+                [userId, account.account_id, parseFloat(amount)], (err) => {
+                if (err) {
+                    console.error("Transaction insert error:", err);
+                    return res.status(500).send('Deposit failed');
+                }
+
+                res.send('Deposit successful');
+            });
+        });
+    });
 });
 
 
-// Endpoint to deposit money into an account
-router.post('/deposit', async (req, res) => {
-    const { accountNumber, amount } = req.query;
-    if (!accountNumber || !amount) {
-        return res.status(400).send("Missing account number or amount");
-    }
 
-    try {
-        await db.query('UPDATE accounts SET balance = balance + ? WHERE account_number = ?', [amount, accountNumber]);
-        await db.query('INSERT INTO transactions (account_id, transaction_type, amount, description) VALUES (?, "deposit", ?, "Account deposit")', [accountNumber, amount]);
-        res.send('Deposit successful');
-    } catch (error) {
-        res.status(500).send('Deposit failed');
-    }
-});
 
 // Endpoint to withdraw money from an account
-router.post('/withdraw', async (req, res) => {
-    const { accountNumber, amount } = req.query;
-    if (!accountNumber || !amount) {
-        return res.status(400).send("Missing account number or amount");
+// Withdraw endpoint
+router.post('/withdraw', (req, res) => {
+    const { accountNumber, amount, userId } = req.body;
+    if (!accountNumber || !amount || !userId) {
+        return res.status(400).send("Missing or invalid account number, amount, or user ID");
     }
 
-    try {
-        const [account] = await db.query('SELECT balance FROM accounts WHERE account_number = ?', [accountNumber]);
-        if (!account || account.balance < amount) {
-            return res.status(400).send('Insufficient funds or account not found');
+    // Retrieve the account information
+    db.query('SELECT account_id, balance FROM accounts WHERE account_number = ? AND user_id = ?', [accountNumber, userId], (err, results) => {
+        if (err) {
+            console.error("Database error:", err);
+            return res.status(500).send('Internal server error');
         }
 
-        await db.query('UPDATE accounts SET balance = balance - ? WHERE account_number = ?', [amount, accountNumber]);
-        await db.query('INSERT INTO transactions (account_id, transaction_type, amount, description) VALUES (?, "withdrawal", ?, "Account withdrawal")', [accountNumber, amount]);
-        res.send('Withdrawal successful');
-    } catch (error) {
-        res.status(500).send('Withdrawal failed');
-    }
+        const account = results[0];
+        if (!account) {
+            return res.status(404).send("Account not found");
+        }
+
+        // Check for sufficient balance
+        if (account.balance < parseFloat(amount)) {
+            return res.status(400).send('Insufficient funds');
+        }
+
+        // Perform the withdrawal by updating the balance
+        const newBalance = account.balance - parseFloat(amount);
+        db.query('UPDATE accounts SET balance = ? WHERE account_id = ?', [newBalance, account.account_id], (err) => {
+            if (err) {
+                console.error("Update error:", err);
+                return res.status(500).send('Withdrawal failed');
+            }
+
+            // Insert a transaction record
+            db.query('INSERT INTO transactions (user_id, account_id, transaction_type, amount, description) VALUES (?, ?, "withdrawal", ?, "Account withdrawal")', 
+                [userId, account.account_id, parseFloat(amount)], (err) => {
+                if (err) {
+                    console.error("Transaction insert error:", err);
+                    return res.status(500).send('Withdrawal failed');
+                }
+
+                res.send('Withdrawal successful');
+            });
+        });
+    });
 });
 
 export default router;

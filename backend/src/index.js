@@ -11,7 +11,12 @@ import cors from 'cors'
 
 const app = express()
 
-app.use(cors())
+app.use(cors({
+    origin: 'http://localhost:5173', // Replace with your React frontend's URL
+    methods: 'GET,POST,PUT,DELETE', // Specify allowed HTTP methods
+    credentials: true, // If you need to include credentials (cookies, etc.)
+  }));
+
 app.use(express.json());
 
 app.get('/', (req, res) => {

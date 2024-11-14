@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
+import { useParams } from 'react-router-dom'; // to access route params
 
 interface Transaction {
     transactionId: number;
@@ -13,15 +14,21 @@ interface Transaction {
 }
 
 const TransactionHistory = () => {
+    const { userId } = useParams(); // Access userId from URL params
     const [transactions, setTransactions] = useState<Transaction[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
-    const userId = 1
 
     useEffect(() => {
         const fetchTransactions = async () => {
+            if (!userId) {
+                setError("Invalid user ID");
+                setLoading(false);
+                return;
+            }
             try {
-                const response = await axios.get(`localhost:3000/api/v1/transactions/${userId}`);
+                // Use environment variable for API base URL if needed
+                const response = await axios.get(`http://localhost:3000/api/v1/transactions/${userId}`);
                 setTransactions(response.data);
                 setLoading(false);
             } catch (err) {

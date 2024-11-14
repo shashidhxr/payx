@@ -1,13 +1,14 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
-import { LayoutDashboard, CreditCard, Wallet, PlusCircle } from 'lucide-react';
+import { LayoutDashboard, CreditCard, Wallet, PlusCircle, Banknote } from 'lucide-react';
 import { Account, Loan, User } from '../types/index.ts';
 
 export function Home() {
   const [user, setUser] = useState<User | null>(null);
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [loans, setLoans] = useState<Loan[]>([]);
+  const [totalBalance, setTotalBalance] = useState<string>(''); // Add state for total balance
   const navigate = useNavigate();
   const userId = 1; // This would come from auth context in a real app
 
@@ -25,11 +26,15 @@ export function Home() {
         // Fetch user's loans
         const loansResponse = await axios.get(`http://127.0.0.1:3000/api/v1/loan/user/${userId}`);
         setLoans(loansResponse.data.loans);
+
+        // Fetch total balance
+        const balanceResponse = await axios.get(`http://localhost:3000/api/v1/users/totalBalance/${userId}`);
+        setTotalBalance(balanceResponse.data.total_balance); // Set total balance
       } catch (error) {
         console.error("Error fetching data:", error);
       }
     };
-
+    
     fetchData();
   }, [userId]);
 
@@ -43,11 +48,18 @@ export function Home() {
             <div className="flex gap-4">
 
             <button
-                onClick={() => navigate('/transactions')}
+                onClick={() => navigate('/transfer')}
                 className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 flex items-center gap-2"
               >
-                <PlusCircle size={20} />
-                View Transactions
+                <Banknote size={20} />
+                Transfer
+              </button>                
+            <button
+                onClick={() => navigate(`/transactions/${userId}`)}
+                className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 flex items-center gap-2"
+              >
+                <Banknote size={20} />
+                Transactions
               </button>                
               <button
                 onClick={() => navigate('/account/create')}
@@ -110,7 +122,7 @@ export function Home() {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
           <StatCard
             title="Total Balance"
-            value={`$${accounts.reduce((sum, acc) => sum + acc.balance, 0).toLocaleString()}`}
+            value={`$${totalBalance}`} 
             icon={<LayoutDashboard className="text-blue-600" size={24} />}
           />
           <StatCard
@@ -157,7 +169,6 @@ export function Home() {
   );
 }
 
-
 // Helper Components
 // @ts-ignore
 const StatCard = ({ title, value, icon }) => (
@@ -193,9 +204,8 @@ const AccountCard = ({ account, onClick }) => (
     </div>
     <div>
       <p className="text-sm text-gray-600">Balance</p>
-      <p className="text-2xl font-bold text-gray-900">${account.balance.toLocaleString()}</p>
+      <p className="font-semibold text-gray-900">${account.balance}</p>
     </div>
-    <p className="text-sm text-gray-600 mt-2 capitalize">{account.account_type} Account</p>
   </div>
 );
 
@@ -207,25 +217,20 @@ const LoanCard = ({ loan, onClick }) => (
   >
     <div className="flex justify-between items-start mb-4">
       <div>
-        <p className="text-sm text-gray-600">Loan Type</p>
-        <p className="text-lg font-semibold capitalize">{loan.loan_type}</p>
+        <p className="text-sm text-gray-600">Loan ID</p>
+        <p className="text-lg font-semibold">{loan.loan_id}</p>
       </div>
       <span className={`px-2 py-1 rounded text-sm ${
-        loan.status === 'active' ? 'bg-green-100 text-green-800' :
-        loan.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
-        loan.status === 'rejected' ? 'bg-red-100 text-red-800' :
-        'bg-gray-100 text-gray-800'
+        loan.status === 'active' ? 'bg-blue-100 text-blue-800' :
+        loan.status === 'repaid' ? 'bg-gray-100 text-gray-800' :
+        'bg-yellow-100 text-yellow-800'
       }`}>
         {loan.status}
       </span>
     </div>
     <div>
-      <p className="text-sm text-gray-600">Outstanding Balance</p>
-      <p className="text-2xl font-bold text-gray-900">${loan.balance.toLocaleString()}</p>
-    </div>
-    <div className="mt-2">
-      <p className="text-sm text-gray-600">Interest Rate</p>
-      <p className="text-lg font-semibold">{loan.interest_rate}%</p>
+      <p className="text-sm text-gray-600">Amount</p>
+      <p className="font-semibold text-gray-900">${loan.amount}</p>
     </div>
   </div>
 );

@@ -1,18 +1,17 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useAuth } from './AuthContext';
+import axios from 'axios';
 
 interface LoanApplication {
   user_id: number;
-  branch_id: number;
+  branch_id: string;
   loan_type: 'personal' | 'home' | 'business' | 'education';
-  amount: number;
-  interest_rate: number;
-  term_months: number;
+  amount: string;
+  interest_rate: string;
+  term_months: string;
 }
 
 const LoanApplyPage = () => {
-  const { user, token } = useAuth();
   const navigate = useNavigate();
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -23,34 +22,41 @@ const LoanApplyPage = () => {
     setLoading(true);
 
     const formData = new FormData(e.currentTarget);
+
     const loanData: LoanApplication = {
-      user_id: user?.id || 0,
-      branch_id: parseInt(formData.get('branch_id') as string),
-      loan_type: formData.get('loan_type') as 'personal' | 'home' | 'business' | 'education',
-      amount: parseFloat(formData.get('amount') as string),
-      interest_rate: parseFloat(formData.get('interest_rate') as string),
-      term_months: parseInt(formData.get('term_months') as string),
+      user_id: 1,
+      branch_id: formData.get('branch_id')?.toString() || '1',
+      loan_type: (formData.get('loan_type') as 'personal' | 'home' | 'business' | 'education') || 'personal',
+      amount: formData.get('amount')?.toString() || '500',
+      interest_rate: formData.get('interest_rate')?.toString() || '12',
+      term_months: formData.get('term_months')?.toString() || '18'
     };
 
     try {
-      const response = await fetch('localhost:3000/api/v1/loan/apply', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
-        },
-        body: JSON.stringify(loanData),
-      });
+      const response = await axios.post(
+        'http://localhost:3000/api/v1/loan/apply',
+        loanData,
+        {
+          headers: {
+            'Content-Type': 'application/json',
+            // Add any authentication headers if needed
+          },
+        }
+      );
 
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.message || 'Failed to submit loan application');
+      // Change this condition to check for success
+      if (response.data && response.data.loanId) {
+        navigate(`/loan/${response.data.loanId}`);
+      } else {
+        throw new Error('Loan application failed - no loan ID received');
       }
-
-      const data = await response.json();
-      navigate(`/loan/${data.loanId}`);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'An error occurred');
+      console.error('Loan application error:', err);
+      setError(
+        err instanceof Error 
+          ? err.message 
+          : 'Failed to submit loan application. Please try again.'
+      );
     } finally {
       setLoading(false);
     }

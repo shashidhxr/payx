@@ -2,6 +2,17 @@ import express from 'express';
 import db from '../lib/db.js';
 const router = express.Router();
 
+router.get('/', (req, res) => {
+    const q = 'SELECT transaction_id, account_id, transaction_type, amount, description FROM transactions';
+    db.query(q, (err, data) => {
+        if (err) {
+            return res.status(500).json({ error: err.message });
+        }
+        return res.status(200).json(data);
+    });
+});
+
+
 // Endpoint to transfer money between accounts
 router.post('/transfer', async (req, res) => {
     const { senderId, recipientId, amount } = req.query;

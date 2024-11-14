@@ -19,6 +19,7 @@ const TransferPage = () => {
         amount: parseFloat(amount),
         userId,
       });
+      
       alert('Deposit successful');
       navigate(`/transactions/${userId}`); // Navigate to /transactions on success
     } catch (error) {

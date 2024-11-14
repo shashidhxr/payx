@@ -2,7 +2,6 @@ import { BrowserRouter, Routes, Route } from 'react-router-dom'
 import { Landing } from './pages/landing';
 import { Home } from './pages/home.tsx';
 
-import BankAdminDashboard from './pages/dashboard.tsx';
 import CreateAccountPage from './pages/account.tsx';
 import { SignupPage } from './pages/signup.tsx';
 import { SigninPage } from './pages/signin.tsx';
@@ -12,6 +11,8 @@ import TransactionHistory from './pages/transcations.tsx';
 import TransferPage from './pages/transfer.tsx';
 import AccountPage from './pages/account2.tsx';
 import LoanPage from './pages/loan.tsx';
+import LoanDashboard from './pages/loanDashboard.tsx';
+import DashboardPage from './pages/dashboard.tsx';
 
 function App() {
     return(
@@ -19,7 +20,8 @@ function App() {
             <Routes>
                 <Route path='/welcome' element={<Landing></Landing>}></Route>
                 <Route path='/' element={<Home></Home>}></Route>
-                <Route path='/dashboard' element={<BankAdminDashboard></BankAdminDashboard>}></Route>
+                <Route path='/loanDashboard' element={<LoanDashboard></LoanDashboard>}></Route>
+                <Route path='/dashboard' element={<DashboardPage></DashboardPage>}></Route>
                 <Route path='/signup' element={<SignupPage></SignupPage>}></Route>
                 <Route path='/signin' element={<SigninPage></SigninPage>}></Route>
                 <Route path='/account/create' element={<CreateAccountPage></CreateAccountPage>}></Route>
